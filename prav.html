@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Symmetry Drawing</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .cursor {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px white;
+        }
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <img src="1logo.png" alt="Logo" style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px;">
+    <canvas id="canvas"></canvas>
+    <div class="cursor" id="cursor"></div>
+    <div class="controls" id="controls">
+        <input type="color" id="colorPicker" value="#ffcc00">
+        <input type="range" id="brushSize" min="1" max="50" value="5">
+        <select id="symmetry">
+            <option value="1">No Symmetry</option>
+            <option value="2">2-Way</option>
+            <option value="4">4-Way</option>
+            <option value="6">6-Way</option>
+            <option value="8">8-Way</option>
+        </select>
+        <button onclick="clearCanvas()">Clear</button>
+        <button onclick="saveImage()">Save</button>
+    </div>
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const brushSizeInput = document.getElementById('brushSize');
+        const colorPicker = document.getElementById('colorPicker');
+        const symmetrySelect = document.getElementById('symmetry');
+        
+        let points = [];
+        let isDrawing = false;
+        let symmetry = 1;
+        let brushSize = brushSizeInput.value;  // Initialize brush size
+
+        // Function to update brush size
+        brushSizeInput.addEventListener('input', () => {
+            brushSize = brushSizeInput.value;
+        });
+
+        function draw() {
+            points.forEach(({ x, y, color, symmetry, brushSize }) => {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const angleStep = (Math.PI * 2) / symmetry;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = brushSize;
+                ctx.lineCap = "round";
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 5;
+
+                for (let i = 0; i < symmetry; i++) {
+                    const angle = angleStep * i;
+                    let newX = centerX + (x - centerX) * Math.cos(angle) - (y - centerY) * Math.sin(angle);
+                    let newY = centerY + (x - centerX) * Math.sin(angle) + (y - centerY) * Math.cos(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(newX, newY);
+                    ctx.lineTo(newX, newY);
+                    ctx.stroke();
+                }
+            });
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener("mousedown", () => { isDrawing = true; });
+        canvas.addEventListener("mouseup", () => { isDrawing = false; });
+        canvas.addEventListener("mousemove", (event) => {
+            if (isDrawing) {
+                points.push({
+                    x: event.clientX,
+                    y: event.clientY,
+                    color: colorPicker.value,  // Save the selected color with each point
+                    symmetry: symmetry,  // Save the current symmetry for each point
+                    brushSize: brushSize  // Save the brush size with each point
+                });
+            }
+        });
+
+        document.getElementById("symmetry").addEventListener("change", (event) => {
+            symmetry = parseInt(event.target.value);  // Update the global symmetry value
+        });
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            points = [];  // Clears the points array
+        }
+
+        function saveImage() {
+            const link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = "drawing.png";
+            link.click();
+        }
+
+        draw();
+    </script>
+</body>
+</html>
